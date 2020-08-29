@@ -1,22 +1,21 @@
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 
 from service.data_provider import app_data_provider
 
 
-# TODO: Try using DataTable https://dash.plotly.com/datatable
-def __create_table__(max_rows=10):
+# TODO: Look at last example here: https://dash.plotly.com/datatable/callbacks - need to create lazy loading
+def __create_table__(max_rows=100):
     df = app_data_provider.get_patient_info_df()
-    return html.Table([
-        html.Thead(
-            html.Tr([html.Th(col) for col in df.columns])
-        ),
-        html.Tbody([
-            html.Tr([
-                html.Td(df.iloc[i][col]) for col in df.columns
-            ]) for i in range(min(len(df), max_rows))
-        ])
-    ])
+    return dash_table.DataTable(
+        id='table',
+        columns=[{"name": i, "id": i} for i in df.columns],
+        data=df.to_dict('records'),
+        page_size=max_rows,
+        sort_action='native',
+        filter_action='native'
+    )
 
 
 def create_patient_info_tab(props=None):

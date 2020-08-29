@@ -40,6 +40,7 @@ def render_tab_content(tab_value):
     elif tab_value == 'infection-cases-tab':
         return create_case_map_tab()
     elif tab_value == 'patient-routes-tab':
+        # TODO
         return html.Div([
             html.H3('Tab content 3')
         ])
