@@ -31,6 +31,7 @@ def __create_map__() -> dcc.Graph:
     )
 
 
+# TODO: kwargs instead of props
 def create_case_map_tab(props=None):
     """
     Create the view for case map tab

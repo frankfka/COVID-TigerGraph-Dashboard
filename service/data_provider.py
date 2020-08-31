@@ -2,45 +2,55 @@ from typing import List, Dict
 
 import pandas as pd
 
-from paths import get_path
+from config import Config, app_config
+from models.InfectedByEdge import InfectedByEdge
+from models.InfectionCaseVertex import InfectionCaseVertex
+from models.PatientVertex import PatientVertex
+from util import get_path
 
-# TODO: Data classes
+from service.tigergraph_service import TigerGraphService
+
+
 class DataProvider:
     """
     Responsible for retrieval & update of all data for views
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, config: Config):
+        self.db = TigerGraphService(config)
+        return
 
-    def get_patient_vertices(self) -> List[Dict]:
+    def get_infection_case_vertices(self) -> List[InfectionCaseVertex]:
+        vertices = self.db.get_infection_case_vertices(limit=50, sort_by_attrs=["id"])
         return [
-            {
-                "patient_id": patient_row["patient_id"],
-                "symptom_onset_date": patient_row["symptom_onset_date"]
-            } for _, patient_row in self.get_patient_info_df().iterrows()
+            InfectionCaseVertex.from_tg_data(vertex)
+            for vertex in vertices
         ]
 
-    def get_infected_by_edges(self) -> List[Dict]:
-        # Some "infected_by" items are not actual patients in the CSV, so need to filter those out
-        available_patient_ids = set([
-            patient_row["patient_id"] for _, patient_row in self.get_patient_info_df().iterrows()
-        ])
+    def get_patient_vertices(self) -> List[PatientVertex]:
+        vertices = self.db.get_patient_vertices(limit=50, sort_by_attrs=["patient_id"])
         return [
-            {
-                "source": patient_row["patient_id"],
-                "target": patient_row["infected_by"]
-            } for _, patient_row in self.get_patient_info_df().iterrows()
-            if patient_row["infected_by"] and patient_row["infected_by"] in available_patient_ids
+            PatientVertex.from_tg_data(vertex)
+            for vertex in vertices
+        ]
+
+    def get_infected_by_edges(self, source_patients: List[PatientVertex]) -> List[Dict]:
+        edges = self.db.get_infected_by_edges(
+            source_ids=[patient.patient_id for patient in source_patients],
+            limit=50
+        )
+        return [
+            InfectedByEdge.from_tg_data(edge)
+            for edge in edges
         ]
 
     def get_patient_info_df(self) -> pd.DataFrame:
         # TODO: Caching
-        return pd.read_csv(get_path('data/PatientInfo.csv')).head(100)
+        return pd.read_csv(get_path('data/PatientInfo.csv'))
 
     def get_cases_df(self) -> pd.DataFrame:
         return pd.read_csv(get_path('data/Case.csv'))
 
 
 # Instance of DataProvider that should be used in all views
-app_data_provider = DataProvider()
+app_data_provider = DataProvider(app_config)
