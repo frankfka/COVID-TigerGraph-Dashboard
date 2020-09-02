@@ -1,18 +1,18 @@
 from dataclasses import dataclass
-from typing import Optional, Mapping
+from typing import Mapping
 
 
 @dataclass
 class InfectedByEdge:
-    source_id: str
-    target_id: str
+    victim_patient_id: str  # Patient being infected
+    infector_id: str  # Patient infecting others
 
     def __hash__(self):
-        return hash(self.source_id + self.target_id)
+        return hash(self.victim_patient_id + self.infector_id)
 
     @classmethod
     def from_tg_data(cls, data: Mapping):
         return cls(
-            source_id=data["from_id"],
-            target_id=data["to_id"]
+            victim_patient_id=data["from_id"],
+            infector_id=data["to_id"]
         )

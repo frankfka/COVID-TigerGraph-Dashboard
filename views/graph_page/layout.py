@@ -5,6 +5,7 @@ import dash_html_components as html
 import dash_cytoscape as cyto
 from dash.dependencies import Output, Input
 
+from models.BelongsToCaseEdge import BelongsToCaseEdge
 from models.InfectedByEdge import InfectedByEdge
 from models.InfectionCaseVertex import InfectionCaseVertex
 from models.PatientVertex import PatientVertex
@@ -22,6 +23,15 @@ def __map_patient_vertices__(patient_vertices: List[PatientVertex]) -> List[Dict
             }
         } for vertex in patient_vertices
     ]
+
+
+__patient_style__ = {
+    "selector": '[type = "patient_vertex"]',
+    "style": {
+        "background-color": "#FF4136",
+        "shape": "rectangle"
+    }
+}
 
 
 def __map_infection_case_vertices__(infection_case_vertices: List[InfectionCaseVertex]) -> List[Dict]:
@@ -44,25 +54,56 @@ __infection_case_style__ = {
     }
 }
 
-def __map_infected_by_edges__(patient_vertices: List[PatientVertex],
-                              infected_by_edges: List[InfectedByEdge]) -> List[Dict]:
-    # Can't have a target if the target_id is not in the set of patient_vertices that we retrieve
-    source_patient_ids = set([patient.patient_id for patient in patient_vertices])
+
+def __map_infected_by_edges__(infected_by_edges: List[InfectedByEdge]) -> List[Dict]:
     return [
         {
             "data": {
-                "source": edge.source_id,
-                "target": edge.target_id
+                # Flip the source and target to show infection relationship
+                "source": edge.infector_id,
+                "target": edge.victim_patient_id,
+                "type": "infected_by_edge"
             }
-        } for edge in infected_by_edges if edge.target_id in source_patient_ids
+        } for edge in infected_by_edges
     ]
 
 
+__infected_by_style__ = {
+    "selector": '[type = "infected_by_edge"]',
+    "style": {
+        'line-color': 'black',
+        'mid-target-arrow-color': 'black',
+        'mid-target-arrow-shape': 'triangle',
+    }
+}
+
+
+def __map_belongs_to_case_edges__(belongs_to_case_edges: List[BelongsToCaseEdge]) -> List[Dict]:
+    return [
+        {
+            "data": {
+                "source": edge.patient_id,
+                "target": edge.infection_case_id,
+                "type": "belongs_to_case_edge"
+            }
+        } for edge in belongs_to_case_edges
+    ]
+
+
+__belongs_to_case_style__ = {
+    "selector": '[type = "belongs_to_case_edge"]',
+    "style": {
+        'line-color': 'blue'
+    }
+}
+
+# TODO: Node interactivity
 def __create_graph_visualization__():
     # Get data
     patient_vertices = app_data_provider.get_patient_vertices()
-    infection_case_vertices = app_data_provider.get_infection_case_vertices()
     infected_by_edges = app_data_provider.get_infected_by_edges(patient_vertices)
+    belongs_to_case_edges, infection_case_vertices \
+        = app_data_provider.expand_infection_case_vertices(patient_vertices=patient_vertices)
     return cyto.Cytoscape(
         id='graph-visualization',
         # TODO: increase spacing: https://js.cytoscape.org/#layouts
@@ -78,7 +119,8 @@ def __create_graph_visualization__():
             *__map_patient_vertices__(patient_vertices),
             *__map_infection_case_vertices__(infection_case_vertices),
             # Edges
-            *__map_infected_by_edges__(patient_vertices, infected_by_edges)
+            *__map_infected_by_edges__(infected_by_edges),
+            *__map_belongs_to_case_edges__(belongs_to_case_edges)
         ],
         stylesheet=[
             {
@@ -87,14 +129,10 @@ def __create_graph_visualization__():
                     'label': 'data(label)'
                 }
             },
-            {
-                "selector": '[type = "patient_vertex"]',
-                "style": {
-                    "background-color": "#FF4136",
-                    "shape": "rectangle"
-                }
-            },
-            __infection_case_style__
+            __patient_style__,
+            __infection_case_style__,
+            __infected_by_style__,
+            __belongs_to_case_style__
         ]
     )
 

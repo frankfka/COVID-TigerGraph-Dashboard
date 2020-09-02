@@ -8,6 +8,11 @@ load_env()
 
 @dataclass
 class Config:
+    """Holds application configuration"""
+
+    # TigerGraph
+    tg_host: str
+    tg_graph: str
     tg_username: str
     tg_password: str
     tg_api_key: str
@@ -15,6 +20,8 @@ class Config:
     def __init__(self):
         # Inject environment variables from local file
         load_env()
+        self.tg_host = os.getenv("TG_HOST")
+        self.tg_graph = os.getenv("TG_GRAPH")
         self.tg_username = os.getenv("TG_USERNAME")
         self.tg_password = os.getenv("TG_PASSWORD")
         self.tg_api_key = os.getenv("TG_API_KEY")
