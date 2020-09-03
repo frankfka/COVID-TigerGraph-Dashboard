@@ -14,9 +14,6 @@ from util import get_path
 from service.tigergraph_service import TigerGraphService
 
 
-# TODO: Consider flipping logic - makes more sense to get edges FROM a set of vertices, then get the target
-# vertices that corresponds to the target
-
 class DataProvider:
     """
     Responsible for retrieval & update of all data for views
@@ -59,18 +56,21 @@ class DataProvider:
         ]
         return outgoing_edges, infection_vertices
 
-    """
-    Unused
-    """
-
-    def get_patient_travelled_edges(
-            self, source_patients: List[PatientVertex], target_travel_events: List[TravelEventVertex]
-    ) -> List[PatientTravelledEdge]:
-        edges = self.db.get_patient_travelled_edges(from_patient_ids=[patient.patient_id for patient in source_patients])
-        return [
-            PatientTravelledEdge.from_tg_data(edge)
-            for edge in edges
+    def expand_travel_event_vertices(
+            self, patient_vertices: List[PatientVertex]
+    ) -> (List[PatientTravelledEdge], List[TravelEventVertex]):
+        patient_ids = [p.patient_id for p in patient_vertices]
+        outgoing_edges = [
+            PatientTravelledEdge.from_tg_data(edge) for edge in
+            self.db.get_patient_travelled_edges(from_patient_ids=patient_ids)
         ]
+        travel_event_ids = [e.travel_event_id for e in outgoing_edges]
+        travel_event_vertices = [
+            TravelEventVertex.from_tg_data(vertex) for vertex in
+            self.db.get_travel_event_vertices_by_id(travel_event_ids)
+        ]
+        return outgoing_edges, travel_event_vertices
+
 
     """
     Static Data

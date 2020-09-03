@@ -79,6 +79,9 @@ class TigerGraphService:
             filter_by_queries=filter_by_queries
         )
 
+    def get_travel_event_vertices_by_id(self, ids: List[str]) -> List[Dict]:
+        return self.__get_vertices_by_id(type_name="TravelEvent", ids=ids)
+
     """
     Edges
     """
