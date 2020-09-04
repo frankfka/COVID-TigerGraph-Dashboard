@@ -6,7 +6,8 @@ import dash_html_components as html
 import dash_cytoscape as cyto
 from dash.dependencies import Output, Input, State
 
-from app import main_app
+from app import main_app, main_app_cache
+from config import app_config
 from models.PatientTravelledEdge import PatientTravelledEdge
 from models.BelongsToCaseEdge import BelongsToCaseEdge
 from models.InfectedByEdge import InfectedByEdge
@@ -211,6 +212,7 @@ layout = html.Div([
     Output('graph-visualization', 'elements'),
     [Input('displayed_vertex_types_multiselect', 'value')],
     [State('graph-visualization', 'elements')])
+@main_app_cache.memoize(timeout=app_config.app_cache_default_timeout)
 def update_displayed_vertex_types(requested_vertex_types, _):
     patient_vertices = app_data_provider.get_patient_vertices()
     infected_by_edges = app_data_provider.get_infected_by_edges(patient_vertices)

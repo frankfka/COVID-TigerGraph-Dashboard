@@ -1,7 +1,8 @@
-from typing import List, Dict
+from typing import List
 
 import pandas as pd
 
+from app import main_app_cache
 from config import Config, app_config
 from models.BelongsToCaseEdge import BelongsToCaseEdge
 from models.InfectedByEdge import InfectedByEdge
