@@ -212,16 +212,18 @@ layout = html.Div([
     Output('graph-visualization', 'elements'),
     [Input('displayed_vertex_types_multiselect', 'value')],
     [State('graph-visualization', 'elements')])
-@main_app_cache.memoize(timeout=app_config.app_cache_default_timeout)
 def update_displayed_vertex_types(requested_vertex_types, _):
-    patient_vertices = app_data_provider.get_patient_vertices()
-    infected_by_edges = app_data_provider.get_infected_by_edges(patient_vertices)
-    new_elements = [
-        *__map_patient_vertices__(patient_vertices),
-        *__map_infected_by_edges__(infected_by_edges),
-    ]
-    if 'infection_case' in requested_vertex_types:
-        __expand_infection_case_vertices__(patient_vertices, new_elements)
-    if 'travel_event' in requested_vertex_types:
-        __expand_travel_event_vertices__(patient_vertices, new_elements)
-    return new_elements
+    @main_app_cache.memoize(timeout=app_config.app_cache_default_timeout)
+    def get_data(vert_types: List[str]):
+        patient_vertices = app_data_provider.get_patient_vertices()
+        infected_by_edges = app_data_provider.get_infected_by_edges(patient_vertices)
+        new_elements = [
+            *__map_patient_vertices__(patient_vertices),
+            *__map_infected_by_edges__(infected_by_edges),
+        ]
+        if 'infection_case' in vert_types:
+            __expand_infection_case_vertices__(patient_vertices, new_elements)
+        if 'travel_event' in vert_types:
+            __expand_travel_event_vertices__(patient_vertices, new_elements)
+        return new_elements
+    return get_data(requested_vertex_types)

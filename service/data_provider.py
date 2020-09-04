@@ -25,6 +25,7 @@ class DataProvider:
         return
 
     def get_patient_vertices(self) -> List[PatientVertex]:
+        print("querying server")
         vertices = self.db.get_patient_vertices(sort_by_attrs=["patient_id"])
         return [
             PatientVertex.from_tg_data(vertex)
