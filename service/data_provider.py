@@ -1,8 +1,7 @@
-from typing import List
+from typing import List, Set
 
 import pandas as pd
 
-from app import main_app_cache
 from config import Config, app_config
 from models.BelongsToCaseEdge import BelongsToCaseEdge
 from models.InfectedByEdge import InfectedByEdge
@@ -25,11 +24,16 @@ class DataProvider:
         return
 
     def get_patient_vertices(self) -> List[PatientVertex]:
-        print("querying server")
         vertices = self.db.get_patient_vertices(sort_by_attrs=["patient_id"])
         return [
             PatientVertex.from_tg_data(vertex)
             for vertex in vertices
+        ]
+
+    def get_patient_vertices_by_id(self, patient_ids: List[str]) -> List[PatientVertex]:
+        return [
+            PatientVertex.from_tg_data(vertex)
+            for vertex in self.db.get_patient_vertices_by_id(patient_ids)
         ]
 
     def get_infected_by_edges(self, patients: List[PatientVertex]) -> List[InfectedByEdge]:
@@ -66,12 +70,46 @@ class DataProvider:
             PatientTravelledEdge.from_tg_data(edge) for edge in
             self.db.get_patient_travelled_edges(from_patient_ids=patient_ids)
         ]
-        travel_event_ids = [e.travel_event_id for e in outgoing_edges]
-        travel_event_vertices = [
+        return outgoing_edges, self.get_travel_events_by_id([e.travel_event_id for e in outgoing_edges])
+
+    def get_travel_events_by_id(self, event_ids: List[str]):
+        return [
             TravelEventVertex.from_tg_data(vertex) for vertex in
-            self.db.get_travel_event_vertices_by_id(travel_event_ids)
+            self.db.get_travel_event_vertices_by_id(event_ids)
         ]
-        return outgoing_edges, travel_event_vertices
+
+    """
+    Queries
+    """
+    def get_patient_infection_subgraph(self, patient_id: str) -> (
+        List[InfectedByEdge], List[PatientTravelledEdge],
+        List[PatientVertex], List[TravelEventVertex]
+    ):
+        # 4100000006 has good results
+        query_result = self.db.run_infection_subgraph_query(patient_id)
+        infected_by_edges: List[InfectedByEdge] = []
+        patient_travelled_edges: List[PatientTravelledEdge] = []
+        patient_ids: Set[str] = set()
+        travel_event_ids: Set[str] = set()
+        for item in query_result:
+            edge_type = item.get("e_type")
+            if edge_type == "PATIENT_TRAVELED":
+                edge = PatientTravelledEdge.from_tg_data(item)
+                patient_travelled_edges.append(edge)
+                # Add vertex ID's to query
+                patient_ids.add(edge.patient_id)
+                travel_event_ids.add(edge.travel_event_id)
+            elif edge_type == "reverse_INFECTED_BY":
+                edge = InfectedByEdge.from_tg_data(item, is_reverse_edge=True)
+                infected_by_edges.append(edge)
+                # Add vertex ID's to query
+                patient_ids.add(edge.victim_patient_id)
+                patient_ids.add(edge.infector_id)
+        # Query to get patient and travel event info
+        patient_vertices = self.get_patient_vertices_by_id(list(patient_ids))  # TODO just change to iterable
+        travel_event_vertices = self.get_travel_events_by_id(list(travel_event_ids))
+
+        return infected_by_edges, patient_travelled_edges, patient_vertices, travel_event_vertices
 
 
     """

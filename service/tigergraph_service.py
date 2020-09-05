@@ -54,6 +54,9 @@ class TigerGraphService:
             filter_by_queries=filter_by_queries
         )
 
+    def get_patient_vertices_by_id(self, ids: List[str]) -> List[Dict]:
+        return self.__get_vertices_by_id(type_name="Patient", ids=ids)
+
     def get_infection_case_vertices(
             self, limit: int = 50,
             sort_by_attrs: List[str] = None, filter_by_queries: List[str] = None
@@ -149,3 +152,18 @@ class TigerGraphService:
             sort_by_attrs=sort_by_attrs,
             filter_by_queries=filter_by_queries
         )
+
+    """
+    Queries
+    """
+    def run_infection_subgraph_query(self, patient_id: str) -> List[Dict]:
+        # Return a list of edges as dicts - either PATIENT_TRAVELED or reverse_INFECTED_BY
+        res = self.conn.runInstalledQuery(
+            queryName="infectionSubgraph",
+            params={
+                "p": patient_id
+            }
+        )
+        if res and res[0].get("@@edgeSet"):
+            return res[0]["@@edgeSet"]
+        return []
